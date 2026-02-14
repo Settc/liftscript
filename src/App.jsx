@@ -1188,6 +1188,7 @@ const CSS = `
   html, body, #root { height: 100%; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
   textarea::placeholder { color: var(--text-faint); }
+  textarea { -webkit-overflow-scrolling: touch; overflow-y: auto !important; }
   textarea:focus { border-color: var(--text-tertiary) !important; outline: none; }
   input:focus { outline: none; border-color: var(--text) !important; }
   ::-webkit-scrollbar { width: 4px; }
@@ -1219,7 +1220,7 @@ const CSS = `
    ──────────────────────────────────────────── */
 
 const styles = {
-  app: { maxWidth: 520, margin: "0 auto", height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden" },
+  app: { maxWidth: 520, margin: "0 auto", height: "100%", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden" },
   header: { padding: "14px 16px 0", display: "flex", flexDirection: "column", alignItems: "stretch", flexShrink: 0 },
   logo: { display: "flex", alignItems: "center", gap: 10 },
   workoutsHeaderBtn: {
