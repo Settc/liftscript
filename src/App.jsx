@@ -1220,7 +1220,7 @@ const styles = {
   toggleBtn: { border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "6px 16px", borderRadius: 6, cursor: "pointer", transition: "all 150ms ease" },
   dots: { display: "flex", justifyContent: "center", gap: 6, padding: "14px 0 8px", flexShrink: 0 },
   content: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },
-  panelInner: { padding: "6px 16px 0", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
+  panelInner: { padding: "6px 16px 0", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" },
 
   // View controls (sticky top)
   viewControls: {
@@ -1279,7 +1279,7 @@ const styles = {
   chartDiff: { fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 500, marginTop: 2 },
 
   // Editor
-  textarea: { width: "100%", flex: 1, border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", fontFamily: "'DM Mono', monospace", fontSize: 14, lineHeight: 1.75, color: "var(--text)", background: "var(--surface)", resize: "none", boxShadow: "var(--shadow-sm)" },
+  textarea: { width: "100%", flex: 1, minHeight: 0, overflow: "auto", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", fontFamily: "'DM Mono', monospace", fontSize: 14, lineHeight: 1.75, color: "var(--text)", background: "var(--surface)", resize: "none", boxShadow: "var(--shadow-sm)" },
   syntaxToggle: {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
     width: "100%", marginTop: 10, padding: "10px 0",
