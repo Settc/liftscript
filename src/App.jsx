@@ -388,22 +388,7 @@ function LoadDrawer({ saved, onLoad, onDelete, onClose, onNew }) {
 /* ── Onboarding Overlay ── */
 function OnboardingOverlay({ onDismiss }) {
   const [page, setPage] = useState(0);
-  const [textareaRect, setTextareaRect] = useState(null);
-  const [headerRect, setHeaderRect] = useState(null);
 
-  useEffect(() => {
-    const measure = () => {
-      const ta = document.querySelector("textarea");
-      if (ta) setTextareaRect(ta.getBoundingClientRect());
-      const header = document.querySelector("[data-header]");
-      if (header) setHeaderRect(header.getBoundingClientRect());
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-
-  // Touch handling for swipe
   const touchStart = React.useRef(null);
   const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
@@ -414,81 +399,27 @@ function OnboardingOverlay({ onDismiss }) {
     touchStart.current = null;
   };
 
-  if (!textareaRect) return null;
-
-  const lineH = 24.5;
-  const padTop = 16;
-  const lineY = (lineNum) => textareaRect.top + padTop + lineNum * lineH + lineH / 2;
-
-  // Page 1: Basics — points at textarea lines
-  const basicsAnnotations = [
-    { line: 0, label: "Exercise name" },
-    { line: 1, label: "reps * weight * sets" },
-    { line: 2, label: "New line = new day" },
-    { line: 3, label: "Blank line = next exercise" },
-    { line: 5, label: "Varied sets, same day" },
-    { line: 8, label: "Bodyweight" },
+  const sampleLines = page === 0 ? [
+    { code: "Squat", annotations: ["Exercise name"] },
+    { code: "5*135*3", annotations: ["reps * weight * sets"] },
+    { code: "5*185*3", annotations: ["New line = new day"] },
+    { code: "", annotations: ["Blank = next exercise"] },
+    { code: "Bench Press", annotations: [] },
+    { code: "8*135, 8*155, 6*155", annotations: ["Varied sets"] },
+    { code: "", annotations: [] },
+    { code: "Pull-ups", annotations: [] },
+    { code: "10BW", annotations: ["Bodyweight"] },
+  ] : [
+    { code: "Squat r90", annotations: ["r90 = 90s rest"] },
+    { code: "5*135*3", annotations: [] },
+    { code: "5*185*3 // Felt strong", annotations: ["// = note"] },
+    { code: "", annotations: [] },
+    { code: "Bench Press", annotations: [] },
+    { code: "8*135 r45, 8*155 r60, 6*155", annotations: ["Per-set rest"] },
+    { code: "", annotations: [] },
+    { code: "Pull-ups", annotations: [] },
+    { code: "10BW", annotations: [] },
   ];
-
-  // Page 2: Advanced — points at textarea lines + header elements
-  const advancedAnnotations = [
-    { line: 0, label: "r90 = rest timer" },
-    { line: 5, label: "Per-set rest" },
-    { line: 2, label: "// = note" },
-  ];
-
-  const bubbleRight = window.innerWidth - textareaRect.right + 8;
-
-  const renderAnnotations = (annotations) => (
-    <>
-      <svg style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 201 }}>
-        {annotations.map((a, i) => {
-          const y = lineY(a.line);
-          return (
-            <line key={i}
-              x1={textareaRect.left + 40 + (i * 15)} y1={y}
-              x2={textareaRect.right - 8} y2={y}
-              stroke="rgba(250,250,249,0.25)" strokeWidth="1" strokeDasharray="3,3"
-            />
-          );
-        })}
-      </svg>
-      {annotations.map((a, i) => (
-        <div key={i} style={{
-          ...styles.obBubble,
-          right: bubbleRight,
-          top: lineY(a.line),
-          transform: "translateY(-50%)",
-        }}>
-          <div style={styles.obLabel}>{a.label}</div>
-        </div>
-      ))}
-    </>
-  );
-
-  // Header button annotations for page 2
-  const renderHeaderAnnotations = () => {
-    if (!headerRect) return null;
-    const hY = headerRect.bottom + 12;
-    return (
-      <div style={{ ...styles.obHeaderLabel, position: "fixed", top: hY, left: headerRect.left, }}>
-        <div style={styles.obLabel}>Saved workouts</div>
-      </div>
-    );
-  };
-
-  // Onboarding text for page 2
-  const advancedSampleText = [
-    "Squat r90",
-    "5*135*3",
-    "5*185*3 // Felt strong",
-    "",
-    "Bench Press",
-    "8*135 r45, 8*155 r60, 6*155 r90",
-    "",
-    "Pull-ups",
-    "10BW",
-  ].join("\n");
 
   return (
     <div style={styles.obOverlay}
@@ -496,16 +427,49 @@ function OnboardingOverlay({ onDismiss }) {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {page === 0 ? renderAnnotations(basicsAnnotations) : (
-        <>
-          {renderAnnotations(advancedAnnotations)}
-          {renderHeaderAnnotations()}
-        </>
-      )}
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -55%)",
+        width: "calc(100% - 48px)", maxWidth: 380,
+        background: "#1C1917", borderRadius: 16, padding: "24px 20px",
+        zIndex: 202, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22, color: "#FAFAF9", marginBottom: 16 }}>
+          {page === 0 ? "The basics" : "Notes & rest timers"}
+        </div>
+        <div style={{
+          background: "#292524", borderRadius: 10, padding: "14px 16px",
+          fontFamily: "'DM Mono', monospace", fontSize: 13, lineHeight: 1.9,
+        }}>
+          {sampleLines.map((line, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", minHeight: line.code === "" ? 20 : "auto" }}>
+              <span style={{ color: "#D6D3D1", flex: 1, whiteSpace: "pre" }}>{line.code}</span>
+              {line.annotations.length > 0 && (
+                <span style={{
+                  color: "#A8A29E", fontSize: 10, fontFamily: "'DM Sans', sans-serif",
+                  marginLeft: 8, whiteSpace: "nowrap", lineHeight: "24px",
+                }}>
+                  {"\u2190 "}{line.annotations.join(", ")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        {page === 1 && (
+          <div style={{
+            marginTop: 14, padding: "12px 14px",
+            background: "#292524", borderRadius: 10,
+            fontSize: 13, color: "#A8A29E", lineHeight: 1.6,
+            fontFamily: "'DM Sans', sans-serif",
+          }}>
+            <div style={{ marginBottom: 6 }}><span style={{ color: "#D6D3D1" }}>Save</span> &amp; <span style={{ color: "#D6D3D1" }}>Load</span> — keep multiple workouts</div>
+            <div style={{ marginBottom: 6 }}><span style={{ color: "#D6D3D1" }}>Share</span> — generate a code others can import</div>
+            <div><span style={{ color: "#D6D3D1" }}>Auto-mode</span> — hit play to get guided through sets</div>
+          </div>
+        )}
+      </div>
 
       {/* Bottom bar */}
       <div style={styles.obBottom} onClick={(e) => e.stopPropagation()}>
-        {/* Page dots */}
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <div style={{
             width: page === 0 ? 20 : 8, height: 8,
@@ -520,16 +484,19 @@ function OnboardingOverlay({ onDismiss }) {
             transition: "all 200ms ease",
           }} />
         </div>
-
         <div style={styles.obFooter}>
           {page === 0 ? "The basics \u2014 swipe for more" : "Notes, rest timers & more"}
         </div>
-
-        {page === 0 ? (
-          <button style={styles.obDismissBtn} onClick={() => setPage(1)}>Next</button>
-        ) : (
-          <button style={styles.obDismissBtn} onClick={onDismiss}>Got it</button>
-        )}
+        <div style={{ display: "flex", gap: 10, width: "100%" }}>
+          {page === 1 && (
+            <button style={{ ...styles.obDismissBtn, background: "transparent", border: "1px solid rgba(250,250,249,0.3)", flex: 1 }} onClick={() => setPage(0)}>Back</button>
+          )}
+          {page === 0 ? (
+            <button style={{ ...styles.obDismissBtn, flex: 1 }} onClick={() => setPage(1)}>Next</button>
+          ) : (
+            <button style={{ ...styles.obDismissBtn, flex: 1 }} onClick={onDismiss}>Got it</button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1055,7 +1022,17 @@ export default function App() {
 
       {/* Header */}
       <div style={styles.header} data-header>
-        <div style={styles.logo}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+          <div style={styles.logo}>
+            <div style={styles.logoBar} />
+            <span style={styles.logoText}>liftscript</span>
+          </div>
+          <div style={styles.toggle}>
+            <button onClick={() => setTab("edit")} className={tab === "edit" ? "tab-active" : "tab-inactive"} style={styles.toggleBtn}>Edit</button>
+            <button onClick={() => setTab("view")} className={tab === "view" ? "tab-active" : "tab-inactive"} style={styles.toggleBtn}>View</button>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, width: "100%" }}>
           <button style={styles.workoutsHeaderBtn} onClick={() => setShowLoad(true)}>
             <IconFolder />
             {saved.length > 0 && <span style={styles.badge}>{saved.length}</span>}
@@ -1065,15 +1042,12 @@ export default function App() {
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
           </button>
-          <div style={styles.logoBar} />
-          <span style={styles.logoText}>liftscript</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button style={styles.themeBtn} onClick={() => setShowShare(true)} title="Share">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
             </svg>
           </button>
+          <div style={{ flex: 1 }} />
           <button style={styles.themeBtn} onClick={() => setShowOnboarding(true)} title="Help">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -1082,10 +1056,6 @@ export default function App() {
           <button style={styles.themeBtn} onClick={() => setDark(!dark)}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
-          <div style={styles.toggle}>
-            <button onClick={() => setTab("edit")} className={tab === "edit" ? "tab-active" : "tab-inactive"} style={styles.toggleBtn}>Edit</button>
-            <button onClick={() => setTab("view")} className={tab === "view" ? "tab-active" : "tab-inactive"} style={styles.toggleBtn}>View</button>
-          </div>
         </div>
       </div>
 
@@ -1225,8 +1195,8 @@ const CSS = `
    ──────────────────────────────────────────── */
 
 const styles = {
-  app: { maxWidth: 520, margin: "0 auto", height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden" },
-  header: { padding: "18px 22px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
+  app: { maxWidth: 520, margin: "0 auto", height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden" },
+  header: { padding: "14px 16px 0", display: "flex", flexDirection: "column", alignItems: "stretch", flexShrink: 0 },
   logo: { display: "flex", alignItems: "center", gap: 10 },
   workoutsHeaderBtn: {
     display: "flex", alignItems: "center", gap: 4,
@@ -1246,18 +1216,18 @@ const styles = {
   toggleBtn: { border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "6px 16px", borderRadius: 6, cursor: "pointer", transition: "all 150ms ease" },
   dots: { display: "flex", justifyContent: "center", gap: 6, padding: "14px 0 8px", flexShrink: 0 },
   content: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },
-  panelInner: { padding: "6px 22px 40px", overflow: "auto", flex: 1, display: "flex", flexDirection: "column" },
+  panelInner: { padding: "6px 16px 40px", overflow: "auto", flex: 1, display: "flex", flexDirection: "column" },
 
   // View controls (sticky top)
   viewControls: {
     flexShrink: 0,
-    padding: "6px 22px 8px",
+    padding: "6px 16px 8px",
     background: "var(--bg)",
   },
   viewScroll: {
     flex: 1,
     overflow: "auto",
-    padding: "0 22px 40px",
+    padding: "0 16px 40px",
   },
 
   // Action bar
@@ -1483,7 +1453,7 @@ const styles = {
 
   // Floating Action Button
   fab: {
-    position: "fixed", bottom: 28, right: "calc(50% - 230px)",
+    position: "fixed", bottom: "calc(28px + env(safe-area-inset-bottom))", right: 20,
     width: 56, height: 56, borderRadius: "50%",
     background: "var(--accent)", color: "var(--accent-inverse)",
     border: "none", cursor: "pointer",
