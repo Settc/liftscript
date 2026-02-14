@@ -616,6 +616,24 @@ function ImportModal({ onImport, onClose }) {
 function EditPanel({ text, setText, onSave, onSaveAs, onNew, currentName }) {
   const [showSaved, setShowSaved] = useState(false);
   const [showSyntax, setShowSyntax] = useState(false);
+  const containerRef = React.useRef(null);
+  const topRef = React.useRef(null);
+  const bottomRef = React.useRef(null);
+  const [taHeight, setTaHeight] = useState(300);
+
+  useEffect(() => {
+    const recalc = () => {
+      if (containerRef.current && topRef.current && bottomRef.current) {
+        const containerH = containerRef.current.clientHeight;
+        const topH = topRef.current.clientHeight;
+        const bottomH = bottomRef.current.clientHeight;
+        setTaHeight(Math.max(100, containerH - topH - bottomH - 12));
+      }
+    };
+    recalc();
+    window.addEventListener("resize", recalc);
+    return () => window.removeEventListener("resize", recalc);
+  }, [showSyntax, currentName]);
 
   const handleQuickSave = () => {
     onSave();
@@ -624,8 +642,8 @@ function EditPanel({ text, setText, onSave, onSaveAs, onNew, currentName }) {
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={styles.panelInner}>
+    <div ref={containerRef} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column" }}>
+      <div ref={topRef} style={{ flexShrink: 0, padding: "6px 16px 0" }}>
         {/* Active workout label */}
         {currentName && (
           <div style={styles.activeLabel}>
@@ -656,18 +674,20 @@ function EditPanel({ text, setText, onSave, onSaveAs, onNew, currentName }) {
             <span>New</span>
           </button>
         </div>
+      </div>
 
+      <div style={{ padding: "0 16px", flex: 1, minHeight: 0 }}>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={"deadlift\n4x135x3\n4x185x3\n\npushups\n20BW\n25BW"}
-          style={styles.textarea}
+          style={{ ...styles.textarea, flex: "none", height: taHeight }}
           spellCheck={false}
         />
       </div>
 
       {/* Syntax tray - pinned to bottom */}
-      <div style={{ flexShrink: 0, padding: "0 16px", paddingBottom: showSyntax ? 8 : 0, background: "var(--bg)" }}>
+      <div ref={bottomRef} style={{ flexShrink: 0, padding: "0 16px", paddingBottom: showSyntax ? 8 : 4, background: "var(--bg)" }}>
         <button style={styles.syntaxToggle} onClick={() => setShowSyntax(!showSyntax)}>
           <span style={styles.syntaxToggleText}>SYNTAX</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -679,7 +699,7 @@ function EditPanel({ text, setText, onSave, onSaveAs, onNew, currentName }) {
         {showSyntax && (
           <div style={styles.helpBox}>
             <HelpRow code="4x20" desc="4 reps @ 20 lbs (* or x)" />
-            <HelpRow code="4x20x3" desc="3 sets \u00B7 4 reps @ 20 lbs" />
+            <HelpRow code="4x20x3" desc="3 sets · 4 reps @ 20 lbs" />
             <HelpRow code="10x50, 9x50" desc="varied sets on one line" />
             <HelpRow code="20BW" desc="20 reps bodyweight" />
             <HelpRow code="// note" desc="workout note" />
@@ -1219,7 +1239,7 @@ const styles = {
   toggle: { display: "flex", gap: 2, background: "var(--surface-hover)", borderRadius: 8, padding: 3 },
   toggleBtn: { border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "6px 16px", borderRadius: 6, cursor: "pointer", transition: "all 150ms ease" },
   dots: { display: "flex", justifyContent: "center", gap: 6, padding: "14px 0 8px", flexShrink: 0 },
-  content: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },
+  content: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" },
   panelInner: { padding: "6px 16px 0", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" },
 
   // View controls (sticky top)
