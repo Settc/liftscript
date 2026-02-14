@@ -624,69 +624,73 @@ function EditPanel({ text, setText, onSave, onSaveAs, onNew, currentName }) {
   };
 
   return (
-    <div style={styles.panelInner}>
-      {/* Active workout label */}
-      {currentName && (
-        <div style={styles.activeLabel}>
-          Editing: <strong>{currentName}</strong>
-        </div>
-      )}
-
-      {/* Action bar */}
-      <div style={styles.actionBar}>
-        {currentName ? (
-          <>
-            <button style={styles.actionBtn} onClick={handleQuickSave}>
-              <IconSave />
-              <span>{showSaved ? "Saved!" : "Save"}</span>
-            </button>
-            <button style={styles.actionBtnSecondary} onClick={onSaveAs}>
-              <span>Save As</span>
-            </button>
-          </>
-        ) : (
-          <button style={styles.actionBtn} onClick={onSaveAs}>
-            <IconSave />
-            <span>Save</span>
-          </button>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={styles.panelInner}>
+        {/* Active workout label */}
+        {currentName && (
+          <div style={styles.activeLabel}>
+            Editing: <strong>{currentName}</strong>
+          </div>
         )}
-        <button style={styles.actionBtn} onClick={onNew}>
-          <IconPlus />
-          <span>New</span>
-        </button>
+
+        {/* Action bar */}
+        <div style={styles.actionBar}>
+          {currentName ? (
+            <>
+              <button style={styles.actionBtn} onClick={handleQuickSave}>
+                <IconSave />
+                <span>{showSaved ? "Saved!" : "Save"}</span>
+              </button>
+              <button style={styles.actionBtnSecondary} onClick={onSaveAs}>
+                <span>Save As</span>
+              </button>
+            </>
+          ) : (
+            <button style={styles.actionBtn} onClick={onSaveAs}>
+              <IconSave />
+              <span>Save</span>
+            </button>
+          )}
+          <button style={styles.actionBtn} onClick={onNew}>
+            <IconPlus />
+            <span>New</span>
+          </button>
+        </div>
+
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={"deadlift\n4x135x3\n4x185x3\n\npushups\n20BW\n25BW"}
+          style={styles.textarea}
+          spellCheck={false}
+        />
       </div>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={"deadlift\n4x135x3\n4x185x3\n\npushups\n20BW\n25BW"}
-        style={styles.textarea}
-        spellCheck={false}
-      />
+      {/* Syntax tray - pinned to bottom */}
+      <div style={{ flexShrink: 0, padding: "0 16px", paddingBottom: showSyntax ? 8 : 0, background: "var(--bg)" }}>
+        <button style={styles.syntaxToggle} onClick={() => setShowSyntax(!showSyntax)}>
+          <span style={styles.syntaxToggleText}>SYNTAX</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: showSyntax ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms ease" }}>
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
 
-      {/* Syntax tray toggle */}
-      <button style={styles.syntaxToggle} onClick={() => setShowSyntax(!showSyntax)}>
-        <span style={styles.syntaxToggleText}>SYNTAX</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: showSyntax ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms ease" }}>
-          <polyline points="18 15 12 9 6 15"/>
-        </svg>
-      </button>
-
-      {showSyntax && (
-        <div style={styles.helpBox}>
-          <HelpRow code="4x20" desc="4 reps @ 20 lbs (* or x)" />
-          <HelpRow code="4x20x3" desc="3 sets \u00B7 4 reps @ 20 lbs" />
-          <HelpRow code="10x50, 9x50" desc="varied sets on one line" />
-          <HelpRow code="20BW" desc="20 reps bodyweight" />
-          <HelpRow code="// note" desc="workout note" />
-          <HelpRow code="Squat r90" desc="90s rest between all sets" />
-          <HelpRow code="5x100 r60" desc="60s rest after this set" />
-          <HelpRow code="text" desc="exercise name" />
-          <HelpRow code="blank line" desc="next exercise" />
-          <div style={styles.helpMeta}>Each line under an exercise = a new day</div>
-        </div>
-      )}
+        {showSyntax && (
+          <div style={styles.helpBox}>
+            <HelpRow code="4x20" desc="4 reps @ 20 lbs (* or x)" />
+            <HelpRow code="4x20x3" desc="3 sets \u00B7 4 reps @ 20 lbs" />
+            <HelpRow code="10x50, 9x50" desc="varied sets on one line" />
+            <HelpRow code="20BW" desc="20 reps bodyweight" />
+            <HelpRow code="// note" desc="workout note" />
+            <HelpRow code="Squat r90" desc="90s rest between all sets" />
+            <HelpRow code="5x100 r60" desc="60s rest after this set" />
+            <HelpRow code="text" desc="exercise name" />
+            <HelpRow code="blank line" desc="next exercise" />
+            <div style={styles.helpMeta}>Each line under an exercise = a new day</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1216,7 +1220,7 @@ const styles = {
   toggleBtn: { border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "6px 16px", borderRadius: 6, cursor: "pointer", transition: "all 150ms ease" },
   dots: { display: "flex", justifyContent: "center", gap: 6, padding: "14px 0 8px", flexShrink: 0 },
   content: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },
-  panelInner: { padding: "6px 16px 40px", overflow: "auto", flex: 1, display: "flex", flexDirection: "column" },
+  panelInner: { padding: "6px 16px 0", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
 
   // View controls (sticky top)
   viewControls: {
