@@ -13,8 +13,8 @@ import {
 import {
   extractRest, parseSingleSet, parseSetLine, parseWorkouts, groupByDay,
   buildSessionSteps, formatRest, formatSet, formatEntrySummary, formatTimer,
-  getAutoDate, formatDate, buildResultsText,
-  METRICS, computeMetric, ONBOARDING_TEXT
+  formatCardioTime, getAutoDate, formatDate, buildResultsText,
+  METRICS, CARDIO_METRICS, computeMetric, computeCardioMetric, isCardioExercise, ONBOARDING_TEXT
 } from "./parser";
 
 /* ────────────────────────────────────────────
@@ -388,14 +388,15 @@ function LoadDrawer({ saved, onLoad, onDelete, onClose, onNew }) {
 /* ── Onboarding Overlay ── */
 function OnboardingOverlay({ onDismiss }) {
   const [page, setPage] = useState(0);
+  const totalPages = 3;
 
   const touchStart = React.useRef(null);
   const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
     if (touchStart.current === null) return;
     const diff = touchStart.current - e.changedTouches[0].clientX;
-    if (diff > 50 && page === 0) setPage(1);
-    if (diff < -50 && page === 1) setPage(0);
+    if (diff > 50 && page < totalPages - 1) setPage(page + 1);
+    if (diff < -50 && page > 0) setPage(page - 1);
     touchStart.current = null;
   };
 
@@ -409,6 +410,17 @@ function OnboardingOverlay({ onDismiss }) {
     { code: "", annotations: [] },
     { code: "Pull-ups", annotations: [] },
     { code: "10BW", annotations: ["Bodyweight"] },
+  ] : page === 1 ? [
+    { code: "Run", annotations: ["Exercise name"] },
+    { code: "3mi 25:00", annotations: ["distance + time"] },
+    { code: "3.2mi 24:30", annotations: ["auto-paces"] },
+    { code: "", annotations: [] },
+    { code: "Jump Rope", annotations: [] },
+    { code: "15:00", annotations: ["Time only"] },
+    { code: "12:00 c200", annotations: ["c = calories"] },
+    { code: "", annotations: [] },
+    { code: "Bike", annotations: [] },
+    { code: "10km 30:00 c350", annotations: ["All together"] },
   ] : [
     { code: "Squat r90", annotations: ["r90 = 90s rest"] },
     { code: "5*135*3", annotations: [] },
@@ -420,6 +432,9 @@ function OnboardingOverlay({ onDismiss }) {
     { code: "Pull-ups", annotations: [] },
     { code: "10BW", annotations: [] },
   ];
+
+  const pageTitle = ["The basics", "Cardio", "Notes & rest timers"][page];
+  const pageFooter = ["The basics \u2014 swipe for more", "Cardio tracking", "Notes, rest timers & more"][page];
 
   return (
     <div style={styles.obOverlay}
@@ -434,7 +449,7 @@ function OnboardingOverlay({ onDismiss }) {
         zIndex: 202, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
       }} onClick={(e) => e.stopPropagation()}>
         <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22, color: "#FAFAF9", marginBottom: 16 }}>
-          {page === 0 ? "The basics" : "Notes & rest timers"}
+          {pageTitle}
         </div>
         <div style={{
           background: "#292524", borderRadius: 10, padding: "14px 16px",
@@ -454,16 +469,35 @@ function OnboardingOverlay({ onDismiss }) {
             </div>
           ))}
         </div>
-        {page === 1 && (
+        {page === 2 && (
           <div style={{
             marginTop: 14, padding: "12px 14px",
             background: "#292524", borderRadius: 10,
             fontSize: 13, color: "#A8A29E", lineHeight: 1.6,
             fontFamily: "'DM Sans', sans-serif",
           }}>
-            <div style={{ marginBottom: 6 }}><span style={{ color: "#D6D3D1" }}>Save</span> &amp; <span style={{ color: "#D6D3D1" }}>Load</span> — keep multiple workouts</div>
-            <div style={{ marginBottom: 6 }}><span style={{ color: "#D6D3D1" }}>Share</span> — generate a code others can import</div>
-            <div><span style={{ color: "#D6D3D1" }}>Auto-mode</span> — hit play to get guided through sets</div>
+            <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D6D3D1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span><span style={{ color: "#D6D3D1" }}>Save</span> — save your workout</span>
+            </div>
+            <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D6D3D1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span><span style={{ color: "#D6D3D1" }}>Load</span> — open saved workouts</span>
+            </div>
+            <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D6D3D1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              <span><span style={{ color: "#D6D3D1" }}>Share</span> — generate a code others can import</span>
+            </div>
+            <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D6D3D1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span><span style={{ color: "#D6D3D1" }}>Import</span> — load a shared workout code</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#2D8C82", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="6" height="6" viewBox="0 0 24 24" fill="#0C0A09" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <span><span style={{ color: "#D6D3D1" }}>Auto-mode</span> — guided sets with rest timers</span>
+            </div>
           </div>
         )}
       </div>
@@ -471,28 +505,24 @@ function OnboardingOverlay({ onDismiss }) {
       {/* Bottom bar */}
       <div style={styles.obBottom} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <div style={{
-            width: page === 0 ? 20 : 8, height: 8,
-            borderRadius: 4,
-            background: page === 0 ? "#FAFAF9" : "rgba(250,250,249,0.3)",
-            transition: "all 200ms ease",
-          }} />
-          <div style={{
-            width: page === 1 ? 20 : 8, height: 8,
-            borderRadius: 4,
-            background: page === 1 ? "#FAFAF9" : "rgba(250,250,249,0.3)",
-            transition: "all 200ms ease",
-          }} />
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{
+              width: page === i ? 20 : 8, height: 8,
+              borderRadius: 4,
+              background: page === i ? "#FAFAF9" : "rgba(250,250,249,0.3)",
+              transition: "all 200ms ease",
+            }} />
+          ))}
         </div>
         <div style={styles.obFooter}>
-          {page === 0 ? "The basics \u2014 swipe for more" : "Notes, rest timers & more"}
+          {pageFooter}
         </div>
         <div style={{ display: "flex", gap: 10, width: "100%" }}>
-          {page === 1 && (
-            <button style={{ ...styles.obDismissBtn, background: "transparent", border: "1px solid rgba(250,250,249,0.3)", flex: 1 }} onClick={() => setPage(0)}>Back</button>
+          {page > 0 && (
+            <button style={{ ...styles.obDismissBtn, background: "transparent", border: "1px solid rgba(250,250,249,0.3)", flex: 1 }} onClick={() => setPage(page - 1)}>Back</button>
           )}
-          {page === 0 ? (
-            <button style={{ ...styles.obDismissBtn, flex: 1 }} onClick={() => setPage(1)}>Next</button>
+          {page < totalPages - 1 ? (
+            <button style={{ ...styles.obDismissBtn, flex: 1 }} onClick={() => setPage(page + 1)}>Next</button>
           ) : (
             <button style={{ ...styles.obDismissBtn, flex: 1 }} onClick={onDismiss}>Got it</button>
           )}
@@ -800,18 +830,24 @@ function ViewPanel({ exercises }) {
       {grouping === "exercise" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {exercises.map((ex, ei) => {
+            const isCardio = isCardioExercise(ex);
+            const metricsToUse = isCardio ? CARDIO_METRICS : METRICS;
+            const activeMetricKey = isCardio ? (["distance","time","calories"].includes(metric) ? metric : "distance") : metric;
+            const computeFn = isCardio ? computeCardioMetric : computeMetric;
+
             const chartData = ex.entries.length >= 2
-              ? ex.entries.map((entry) => computeMetric(entry.sets, metric))
+              ? ex.entries.map((entry) => computeFn(entry.sets, activeMetricKey))
               : null;
-            const allBW = ex.entries.every((entry) => entry.sets.every((s) => s.weight === "BW"));
-            const activeMetric = METRICS.find((m) => m.key === metric);
+            const allBW = !isCardio && ex.entries.every((entry) => entry.sets.every((s) => s.weight === "BW"));
+            const activeMetric = metricsToUse.find((m) => m.key === activeMetricKey) || metricsToUse[0];
             const latestVal = ex.entries.length > 0
-              ? computeMetric(ex.entries[ex.entries.length - 1].sets, metric)
+              ? computeFn(ex.entries[ex.entries.length - 1].sets, activeMetricKey)
               : null;
             const prevVal = ex.entries.length > 1
-              ? computeMetric(ex.entries[ex.entries.length - 2].sets, metric)
+              ? computeFn(ex.entries[ex.entries.length - 2].sets, activeMetricKey)
               : null;
             const diff = latestVal !== null && prevVal !== null ? latestVal - prevVal : null;
+            const displayVal = isCardio && activeMetricKey === "time" && latestVal ? formatCardioTime(latestVal) : latestVal;
 
             return (
               <div key={ei} style={styles.card}>
@@ -827,7 +863,7 @@ function ViewPanel({ exercises }) {
                     <div style={styles.chartHeader}>
                       <div>
                         <div style={styles.chartValue}>
-                          {latestVal}{activeMetric.unit ? " " + activeMetric.unit : ""}
+                          {displayVal}{activeMetric.unit ? " " + activeMetric.unit : ""}
                         </div>
                         <div style={styles.chartLabel}>{activeMetric.label}</div>
                       </div>
@@ -1480,7 +1516,7 @@ const styles = {
   fab: {
     position: "fixed", bottom: "calc(28px + env(safe-area-inset-bottom))", right: 20,
     width: 56, height: 56, borderRadius: "50%",
-    background: "var(--accent)", color: "var(--accent-inverse)",
+    background: "#2D8C82", color: "#0C0A09",
     border: "none", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
     boxShadow: "0 4px 14px rgba(0,0,0,0.2)",

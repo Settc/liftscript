@@ -10,6 +10,53 @@ export function extractRest(str) {
   return [str, null];
 }
 
+export function parseCardioLine(segment) {
+  const [cleaned, rest] = extractRest(segment.trim());
+  
+  // Time only: "25:00" or "1:30:00"
+  const timeOnly = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (timeOnly) {
+    let seconds;
+    if (timeOnly[3]) {
+      seconds = parseInt(timeOnly[1]) * 3600 + parseInt(timeOnly[2]) * 60 + parseInt(timeOnly[3]);
+    } else {
+      seconds = parseInt(timeOnly[1]) * 60 + parseInt(timeOnly[2]);
+    }
+    return { type: 'cardio', distance: null, unit: null, time: seconds, calories: null, rest };
+  }
+
+  // Distance + optional time + optional calories: "3mi 25:00 c350" or "5km" or "2mi c200"
+  const distMatch = cleaned.match(/^(\d+(?:\.\d+)?)\s*(mi|km|m)\s*(?:(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(?:c(\d+))?$/i);
+  if (distMatch) {
+    const distance = parseFloat(distMatch[1]);
+    const unit = distMatch[2].toLowerCase();
+    let time = null;
+    if (distMatch[3] !== undefined) {
+      if (distMatch[5]) {
+        time = parseInt(distMatch[3]) * 3600 + parseInt(distMatch[4]) * 60 + parseInt(distMatch[5]);
+      } else {
+        time = parseInt(distMatch[3]) * 60 + parseInt(distMatch[4]);
+      }
+    }
+    const calories = distMatch[6] ? parseInt(distMatch[6]) : null;
+    return { type: 'cardio', distance, unit, time, calories, rest };
+  }
+
+  // Time + calories: "30:00 c350"
+  const timeCalMatch = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s+c(\d+)$/i);
+  if (timeCalMatch) {
+    let seconds;
+    if (timeCalMatch[3]) {
+      seconds = parseInt(timeCalMatch[1]) * 3600 + parseInt(timeCalMatch[2]) * 60 + parseInt(timeCalMatch[3]);
+    } else {
+      seconds = parseInt(timeCalMatch[1]) * 60 + parseInt(timeCalMatch[2]);
+    }
+    return { type: 'cardio', distance: null, unit: null, time: seconds, calories: parseInt(timeCalMatch[4]), rest };
+  }
+
+  return null;
+}
+
 export function parseSingleSet(segment) {
   const [cleaned, rest] = extractRest(segment.trim());
   const trimmed = cleaned.toUpperCase();
@@ -52,6 +99,10 @@ export function parseSetLine(line) {
     }
     return null;
   }
+
+  // Try cardio first
+  const cardio = parseCardioLine(line);
+  if (cardio) return [cardio];
 
   const result = parseSingleSet(line);
   return result ? [result] : null;
@@ -156,12 +207,45 @@ export function formatRest(seconds) {
 }
 
 export function formatSet(s) {
+  if (s.type === 'cardio') return formatCardio(s);
   const w = s.weight === 'BW' ? 'bodyweight' : s.weight + ' lbs';
   if (s.sets > 1) return s.sets + ' sets \u00D7 ' + s.reps + ' reps @ ' + w;
   return s.reps + ' reps @ ' + w;
 }
 
+export function formatCardio(c) {
+  const parts = [];
+  if (c.distance) parts.push(c.distance + ' ' + c.unit);
+  if (c.time) parts.push(formatCardioTime(c.time));
+  if (c.distance && c.time) {
+    const pace = computePace(c.distance, c.unit, c.time);
+    if (pace) parts.push('(' + pace + ')');
+  }
+  if (c.calories) parts.push(c.calories + ' cal');
+  return parts.join(' \u00B7 ');
+}
+
+export function formatCardioTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function computePace(distance, unit, seconds) {
+  if (!distance || !seconds) return null;
+  const paceSeconds = Math.round(seconds / distance);
+  const m = Math.floor(paceSeconds / 60);
+  const s = paceSeconds % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s + '/' + unit;
+}
+
 export function formatEntrySummary(sets) {
+  const cardioSets = sets.filter(s => s.type === 'cardio');
+  if (cardioSets.length > 0) {
+    return cardioSets.map(s => formatCardio(s)).join(', ');
+  }
   const totalSets = sets.reduce((sum, s) => sum + s.sets, 0);
   const totalReps = sets.reduce((sum, s) => sum + s.reps * s.sets, 0);
   const weights = [...new Set(sets.map((s) => s.weight === 'BW' ? 'BW' : s.weight))];
@@ -258,6 +342,31 @@ export const METRICS = [
   { key: 'maxWeight', label: 'Max Weight', unit: 'lbs' },
   { key: 'totalReps', label: 'Total Reps', unit: '' },
 ];
+
+export const CARDIO_METRICS = [
+  { key: 'distance', label: 'Distance', unit: '' },
+  { key: 'time', label: 'Time', unit: '' },
+  { key: 'calories', label: 'Calories', unit: '' },
+];
+
+export function isCardioExercise(exercise) {
+  return exercise.entries.some(e => e.sets.some(s => s.type === 'cardio'));
+}
+
+export function computeCardioMetric(sets, metric) {
+  const cardioSets = sets.filter(s => s.type === 'cardio');
+  if (cardioSets.length === 0) return 0;
+  switch (metric) {
+    case 'distance':
+      return cardioSets.reduce((sum, s) => sum + (s.distance || 0), 0);
+    case 'time':
+      return cardioSets.reduce((sum, s) => sum + (s.time || 0), 0);
+    case 'calories':
+      return cardioSets.reduce((sum, s) => sum + (s.calories || 0), 0);
+    default:
+      return 0;
+  }
+}
 
 export function computeMetric(sets, metric) {
   switch (metric) {
