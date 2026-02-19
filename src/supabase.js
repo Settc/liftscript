@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase credentials
-const SUPABASE_URL = 'https://hkgbuffasxiwmfrvcflr.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_kqDmKDgGN0e7E-ZAxVSGhg_8LRMNhHW';
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -58,7 +58,7 @@ export async function nativeShare(code, name) {
     const { Share } = await import('@capacitor/share');
     await Share.share({
       title: name || 'Lift Workout',
-      text: `Try my workout on Lift! Code: ${code}`,
+      text: `Try my workout on LiftScript! Code: ${code}`,
       // TODO: Replace with your actual domain when you have one
       // url: `https://yourdomain.com/s/${code}`,
     });

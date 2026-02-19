@@ -268,6 +268,7 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
         <div style={{ marginBottom: 8 }}>
           <label style={styles.sessionFieldLabel}>Reps * Weight</label>
           <input
+            ref={(el) => { if (el) setTimeout(() => el.select(), 50); }}
             style={{
               ...styles.sessionInput,
               borderColor: "var(--accent)",
