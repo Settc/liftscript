@@ -74,6 +74,14 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
   const [reps, setReps] = useState("");
   const [timer, setTimer] = useState(0);
   const [results, setResults] = useState([]);
+  const sessionInputRef = useRef(null);
+
+  // Keep screen awake during session
+  useEffect(() => {
+    keepScreenAwake();
+    requestNotificationPermission();
+    return () => allowScreenSleep();
+  }, []);
 
   const step = steps[stepIdx] || null;
 
@@ -93,6 +101,7 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
 
   useEffect(() => {
     if (!step || phase !== "input") return;
+    sessionInputRef.current = null;
     const prev = [...results].reverse().find((r) => r.exercise === step.exercise);
     if (prev) {
       const w = prev.weight === "BW" ? "BW" : prev.weight;
@@ -102,6 +111,16 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
       setReps(step.suggestedReps + "*" + w);
     }
   }, [stepIdx, phase]);
+
+  // Schedule notification once when rest begins
+  useEffect(() => {
+    if (phase === "rest" && timer > 0) {
+      scheduleRestNotification(timer);
+    }
+    return () => {
+      if (phase === "rest") cancelRestNotification();
+    };
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "rest" || timer <= 0) return;
@@ -150,6 +169,7 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
   }
 
   function handleSkipRest() {
+    cancelRestNotification();
     setTimer(0);
     setPhase("input");
     setStepIdx(stepIdx + 1);
@@ -268,7 +288,12 @@ function SessionRunner({ exercises, onComplete, onCancel }) {
         <div style={{ marginBottom: 8 }}>
           <label style={styles.sessionFieldLabel}>Reps * Weight</label>
           <input
-            ref={(el) => { if (el) setTimeout(() => el.select(), 50); }}
+            ref={(el) => {
+              if (el && el !== sessionInputRef.current) {
+                sessionInputRef.current = el;
+                setTimeout(() => el.select(), 50);
+              }
+            }}
             style={{
               ...styles.sessionInput,
               borderColor: "var(--accent)",
